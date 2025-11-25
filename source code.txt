@@ -1,1 +1,92 @@
+#  Import Libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+pd.set_option('display.max_columns', None)
+
+#  Load Excel Dataset
+df = pd.read_excel("E-Commerce Sales Analysis.xlsx")
+
+#  Explore Data
+print("First 5 rows:")
+print(df.head())
+
+print("\nDataset Info:")
+print(df.info())
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+#  Data Cleaning
+df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
+
+df.drop_duplicates(inplace=True)
+
+# Excel data uses 'customer_id', 'quantity', 'price'
+df.dropna(subset=['customer_id', 'quantity', 'price'], inplace=True)
+
+
+date_col = [col for col in df.columns if 'date' in col][0]
+
+df[date_col] = pd.to_datetime(df[date_col])
+
+df = df[(df['quantity'] > 0) & (df['price'] > 0)]
+
+#  Feature Engineering
+df['revenue'] = df['quantity'] * df['price']
+df['month'] = df[date_col].dt.to_period('M')
+df['year'] = df[date_col].dt.year
+
+#  Key Metrics
+total_revenue = df['revenue'].sum()
+total_orders = df['invoice'].nunique()
+total_customers = df['customer_id'].nunique()
+
+print(f"\nTotal Revenue: ₹{total_revenue:,.2f}")
+print(f"Total Orders: {total_orders}")
+print(f"Total Customers: {total_customers}")
+
+#  Top 10 Products by Revenue
+top_products = df.groupby('description')['revenue'].sum().sort_values(ascending=False).head(10)
+
+plt.figure(figsize=(10,5))
+sns.barplot(x=top_products.values, y=top_products.index)
+plt.title("Top 10 Products by Revenue")
+plt.xlabel("Revenue")
+plt.ylabel("Product")
+plt.show()
+
+#  Revenue by Country
+country_sales = df.groupby('country')['revenue'].sum().sort_values(ascending=False).head(10)
+
+plt.figure(figsize=(10,5))
+sns.barplot(x=country_sales.values, y=country_sales.index)
+plt.title("Top 10 Countries by Revenue")
+plt.xlabel("Revenue")
+plt.ylabel("Country")
+plt.show()
+
+#  Monthly Sales Trend
+monthly_sales = df.groupby('month')['revenue'].sum()
+
+plt.figure(figsize=(12,5))
+monthly_sales.plot(kind='line', marker='o')
+plt.title("Monthly Revenue Trend")
+plt.xlabel("Month")
+plt.ylabel("Revenue")
+plt.grid(True)
+plt.show()
+
+#  Revenue Distribution by Year
+plt.figure(figsize=(6,4))
+sns.boxplot(x='year', y='revenue', data=df)
+plt.title("Revenue Distribution by Year")
+plt.show()
+
+#  Insights Summary
+print("\n📊 Key Insights:")
+print(f"- Total Revenue Generated: ₹{total_revenue:,.2f}")
+print(f"- Highest Selling Product: {top_products.index[0]}")
+print(f"- Top Revenue Country: {country_sales.index[0]}")
+print(f"- Peak Sales Month: {monthly_sales.idxmax()}")
